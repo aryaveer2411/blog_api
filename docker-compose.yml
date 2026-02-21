@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  
+  app:
+    build: .
+    container_name: blog_app
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      MONGO_URI: mongodb://admin:password@mongo:27017/blog?authSource=admin
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+  redis:
+    container_name: redis_container
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --loglevel warning
+    volumes:
+      - redis-data:/data
+
+  mongo:
+    container_name: mongodb_container
+    image: mongo:7
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  redis-data:
+  mongo-data:
