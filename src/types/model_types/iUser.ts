@@ -7,6 +7,8 @@ export interface IProfile {
 
 export interface UserMethods {
   comparePassword(candidate: string): Promise<boolean>;
+  generateAccessToken(): string;
+  generateRefreshToken(): string;
 }
 
 export interface IUser {
@@ -19,4 +21,5 @@ export interface IUser {
   email: string;
   createdAt: Date;
   updatedAt: Date;
+  refreshToken: string;
 }

@@ -1,6 +1,7 @@
 import mongoose, { HydratedDocument, Model, Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import { IUser, UserMethods, IProfile } from "../types/model_types/iUser";
+import jwt, { SignOptions } from "jsonwebtoken";
 
 interface UserModel extends Model<IUser, {}, UserMethods> {}
 
@@ -52,6 +53,9 @@ const UserSchema = new Schema<IUser, UserModel, UserMethods>(
       required: true,
       type: ProfileSchema,
     },
+    refreshToken: {
+      type:String
+    }
   },
   {
     timestamps: true,
@@ -59,7 +63,35 @@ const UserSchema = new Schema<IUser, UserModel, UserMethods>(
 );
 
 UserSchema.methods.comparePassword = async function (password: string) {
- return bcrypt.compare(password, this.password);
+  return bcrypt.compare(password, this.password);
+};
+
+UserSchema.methods.generateAccessToken =  function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      email: this.email,
+      userName: this.first_name,
+    },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY! as SignOptions["expiresIn"],
+    },
+  );
+}
+
+UserSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      email: this.email,
+      userName: this.first_name,
+    },
+    process.env.REFERESH_TOKEN_SECRET!,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY! as SignOptions["expiresIn"],
+    },
+  );
 };
 
 UserSchema.pre("save", async function (this: HydratedDocument<IUser>) {
