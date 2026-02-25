@@ -12,14 +12,14 @@ export interface UserMethods {
 }
 
 export interface IUser {
-  _id: Types.ObjectId;
+  _id?: Types.ObjectId;
   first_name: string;
   last_name: string;
   dob: Date;
-  profile_url: IProfile;
+  profile_url?: IProfile;
   password: string;
   email: string;
-  createdAt: Date;
-  updatedAt: Date;
-  refreshToken: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  refreshToken?: string;
 }

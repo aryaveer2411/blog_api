@@ -21,7 +21,7 @@ const ProfileSchema = new Schema<IProfile>(
   },
 );
 
-const UserSchema = new Schema<IUser, UserModel, UserMethods>(
+export const UserSchema = new Schema<IUser, UserModel, UserMethods>(
   {
     first_name: {
       required: true,
@@ -38,6 +38,7 @@ const UserSchema = new Schema<IUser, UserModel, UserMethods>(
       type: Date,
     },
     email: {
+      type:String,
       required: true,
       trim: true,
       lowercase: true,
@@ -49,13 +50,10 @@ const UserSchema = new Schema<IUser, UserModel, UserMethods>(
       type: String,
       select: false,
     },
-    profile_url: {
-      required: true,
-      type: ProfileSchema,
-    },
+    profile_url: ProfileSchema,
     refreshToken: {
-      type:String
-    }
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -63,8 +61,15 @@ const UserSchema = new Schema<IUser, UserModel, UserMethods>(
 );
 
 UserSchema.methods.comparePassword = async function (password: string) {
+   if (!this.password) {
+     throw new Error(
+       "Password not loaded. Did you forget .select('+password')?",
+     );
+   }
   return bcrypt.compare(password, this.password);
 };
+
+export type UserDocument = HydratedDocument<IUser, UserMethods>;
 
 UserSchema.methods.generateAccessToken =  function () {
   return jwt.sign(
