@@ -31,6 +31,7 @@ export const verfyJwt = asyncHandler(
       if (!user) throw new ApiError(401, "User not found");
 
       req.userEmail = user.email;
+      req.userID = user._id.toString();
       return next();
     } catch (error: any) {
       if (error.name === "TokenExpiredError") {
@@ -59,6 +60,7 @@ export const verfyJwt = asyncHandler(
         });
 
         req.userEmail = user.email;
+        req.userID = user._id.toString();
         return next();
       }
 

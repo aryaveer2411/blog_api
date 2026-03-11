@@ -1,4 +1,5 @@
-import express,{Request,Response} from "express";
+import express, { Request, Response, NextFunction } from "express";
+import { ApiError } from "./utils/api_error";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth_route";
@@ -31,5 +32,12 @@ app.use(cookieParser());
 
 app.use('/api/v1/auth', authRouter);
 app.use("/api/v1/post", postRouter);
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ApiError) {
+    return res.status(err.statusCode).json({ success: false, message: err.message, errors: err.errors });
+  }
+  return res.status(500).json({ success: false, message: err.message || "Internal server error" });
+});
 
 export default app;

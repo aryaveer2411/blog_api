@@ -6,7 +6,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "seed:posts": "ts-node src/scripts/seed_posts.ts"
   },
   "keywords": [],
   "author": "",

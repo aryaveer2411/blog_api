@@ -1,25 +1,12 @@
 import mongoose, { HydratedDocument, Model, Schema } from "mongoose";
 import bcrypt from "bcrypt";
-import { IUser, UserMethods, IProfile } from "../types/model_types/iUser";
+import { IUser, UserMethods } from "../types/model_types/iUser";
 import jwt, { SignOptions } from "jsonwebtoken";
+import { MediaSchema } from "./media_model";
 
 interface UserModel extends Model<IUser, {}, UserMethods> {}
 
-const ProfileSchema = new Schema<IProfile>(
-  {
-    public_id: {
-      type: String,
-      required: true,
-    },
-    url: {
-      type: String,
-      required: true,
-    },
-  },
-  {
-    _id: false,
-  },
-);
+
 
 export const UserSchema = new Schema<IUser, UserModel, UserMethods>(
   {
@@ -38,7 +25,7 @@ export const UserSchema = new Schema<IUser, UserModel, UserMethods>(
       type: Date,
     },
     email: {
-      type:String,
+      type: String,
       required: true,
       trim: true,
       lowercase: true,
@@ -50,7 +37,7 @@ export const UserSchema = new Schema<IUser, UserModel, UserMethods>(
       type: String,
       select: false,
     },
-    profile_url: ProfileSchema,
+    profile_url: MediaSchema,
     refreshToken: {
       type: String,
     },

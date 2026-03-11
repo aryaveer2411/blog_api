@@ -1,9 +1,7 @@
 import { Types } from "mongoose";
+import { IMedia } from "./IMedia";
 
-export interface IProfile {
-  url: string;
-  public_id: string;
-}
+
 
 export interface UserMethods {
   comparePassword(candidate: string): Promise<boolean>;
@@ -16,7 +14,7 @@ export interface IUser {
   first_name: string;
   last_name: string;
   dob: Date;
-  profile_url?: IProfile;
+  profile_url?: IMedia;
   password: string;
   email: string;
   createdAt?: Date;

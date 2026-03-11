@@ -1,5 +1,6 @@
 import mongoose, { Model, Schema } from "mongoose";
 import { IPost } from "../types/model_types/IPost";
+import { MediaSchema } from "./media_model";
 
 interface PostModel extends Model<IPost> {}
 
@@ -11,14 +12,11 @@ const postSchema = new Schema<IPost, PostModel>(
       trim: true,
     },
     content: {
-      required: true,
       type: String,
     },
-    isMedia: {
-      type: Boolean,
-      default: false,
-    },
+    media_url: MediaSchema,
     owner: {
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
