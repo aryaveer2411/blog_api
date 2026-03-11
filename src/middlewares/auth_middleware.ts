@@ -30,7 +30,7 @@ export const verfyJwt = asyncHandler(
 
       if (!user) throw new ApiError(401, "User not found");
 
-      req.user = user;
+      req.userEmail = user.email;
       return next();
     } catch (error: any) {
       if (error.name === "TokenExpiredError") {
@@ -58,7 +58,7 @@ export const verfyJwt = asyncHandler(
           secure: true,
         });
 
-        req.user = user;
+        req.userEmail = user.email;
         return next();
       }
 

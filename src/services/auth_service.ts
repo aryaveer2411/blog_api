@@ -65,4 +65,17 @@ export class AuthService {
       await user.save();
     }
   };
+
+  static changePassword = async (oldPassword:string,newPassword:string,userEmail:string)=>{
+    const user = await User.findOne({"email": userEmail}).select('+password');
+    if (!user) {
+      throw new ApiError(500, "No user Exist");
+    }
+    const isPasswordCorrect = user.comparePassword(oldPassword);
+    if (!isPasswordCorrect) {
+        throw new ApiError(500, "Incorrect Password");
+    }
+    user.password = newPassword;
+    await user.save();
+  }
 }
