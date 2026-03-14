@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth_route";
 import { postRouter } from "./routes/post_route";
+import { commentReactionRouter, reactionRouter } from "./routes/reaction_route";
 
 const app = express();
 
@@ -30,14 +31,23 @@ app.use(
 app.use(express.static("public"));
 app.use(cookieParser());
 
-app.use('/api/v1/auth', authRouter);
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/post", postRouter);
+app.use("/api/v1/post/:postId/reactions", reactionRouter);
+app.use(
+  "/api/v1/post/:postId/comments/:commentId/reactions",
+  commentReactionRouter,
+);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
-    return res.status(err.statusCode).json({ success: false, message: err.message, errors: err.errors });
+    return res
+      .status(err.statusCode)
+      .json({ success: false, message: err.message, errors: err.errors });
   }
-  return res.status(500).json({ success: false, message: err.message || "Internal server error" });
+  return res
+    .status(500)
+    .json({ success: false, message: err.message || "Internal server error" });
 });
 
 export default app;

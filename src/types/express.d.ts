@@ -3,6 +3,7 @@ declare global {
     interface Request {
       userEmail?: string;
       userID?: string;
+      postId?: string;
     }
   }
 }
