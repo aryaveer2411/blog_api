@@ -6,6 +6,8 @@ import { authRouter } from "./routes/auth_route";
 import { postRouter } from "./routes/post_route";
 import { commentReactionRouter, reactionRouter } from "./routes/reaction_route";
 import { commentRouter } from "./routes/comment_route";
+import swaggerUi from "swagger-ui-express";
+import swaggerDocument from "./swagger";
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use(
 
 app.use(express.static("public"));
 app.use(cookieParser());
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/post", postRouter);
