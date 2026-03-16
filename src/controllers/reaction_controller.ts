@@ -2,13 +2,10 @@ import { ApiError } from "../utils/api_error";
 import { asyncHandler } from "../utils/async_handler";
 import { ApiResponse } from "../utils/api_response";
 import { ReactionService } from "../services/reaction_service";
-import { response } from "express";
+import { ReactionBodySchema, ReactionPaginationQuerySchema } from "../validators/reaction_validator";
 
 const addReaction = asyncHandler(async (req, res) => {
-  const { reaction } = req.body;
-  if (!reaction) {
-    throw new ApiError(400, "Missing reaction value");
-  }
+  const { reaction } = ReactionBodySchema.parse(req.body);
   const userID = req.userID;
 
   const result = await ReactionService.addReactionToPost(
@@ -34,13 +31,11 @@ const removeReaction = asyncHandler(async (req, res) => {
 });
 
 const getReactions = asyncHandler(async (req, res) => {
-  const { page, limit } = req.query;
-  const pageNo = Number(page) || 1;
-  const itemPerPage = Number(limit) || 25;
+  const { page, limit } = ReactionPaginationQuerySchema.parse(req.query);
   const reactions = await ReactionService.getReactionOnPost(
     req.postId!,
-    pageNo,
-    itemPerPage,
+    page,
+    limit,
   );
   return res
     .status(200)
@@ -55,17 +50,15 @@ const getReactions = asyncHandler(async (req, res) => {
 
 // GET /users/:userId/reactions  ← all posts a user reacted on
 const getUserReactions = asyncHandler(async (req, res) => {
-  const { page, limit } = req.query;
   const { userID } = req.params;
   if (!userID) {
     throw new ApiError(400, "User ID is required");
   }
-  const pageNo = Number(page) || 1;
-  const itemPerPage = Number(limit) || 25;
+  const { page, limit } = ReactionPaginationQuerySchema.parse(req.query);
   const reactions = await ReactionService.getReactionOnPost(
     req.postId!,
-    pageNo,
-    itemPerPage,
+    page,
+    limit,
     userID,
   );
   return res.status(200).json({
@@ -74,10 +67,7 @@ const getUserReactions = asyncHandler(async (req, res) => {
 });
 
 const addCommentReaction = asyncHandler(async (req, res) => {
-  const { reaction } = req.body;
-  if (!reaction) {
-    throw new ApiError(400, "Missing reaction value");
-  }
+  const { reaction } = ReactionBodySchema.parse(req.body);
   const result = await ReactionService.addReactionToComment(
     req.commentId!,
     reaction,
@@ -96,13 +86,11 @@ const removeCommentReaction = asyncHandler(async (req, res) => {
 });
 
 const getCommentReactions = asyncHandler(async (req, res) => {
-  const { page, limit } = req.query;
-  const pageNo = Number(page) || 1;
-  const itemPerPage = Number(limit) || 25;
+  const { page, limit } = ReactionPaginationQuerySchema.parse(req.query);
   const reactions = await ReactionService.getReactionsOnComment(
     req.commentId!,
-    pageNo,
-    itemPerPage,
+    page,
+    limit,
   );
   return res
     .status(200)

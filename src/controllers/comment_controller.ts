@@ -2,13 +2,11 @@ import { ApiError } from "../utils/api_error";
 import { asyncHandler } from "../utils/async_handler";
 import { ApiResponse } from "../utils/api_response";
 import { CommentService } from "../services/comment_service";
+import { CommentBodySchema, CommentPaginationQuerySchema } from "../validators/comment_validator";
 
 // POST /posts/:postId/comments
 const addComment = asyncHandler(async (req, res) => {
-  const { content } = req.body;
-  if (!content) {
-    throw new ApiError(400, "Content is required");
-  }
+  const { content } = CommentBodySchema.parse(req.body);
   const result = await CommentService.addCommentToPost(
     req.postId!,
     content,
@@ -22,10 +20,7 @@ const addComment = asyncHandler(async (req, res) => {
 // POST /posts/:postId/comments/:commentId/replies
 const addReply = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  const { content } = req.body;
-  if (!content) {
-    throw new ApiError(400, "Content is required");
-  }
+  const { content } = CommentBodySchema.parse(req.body);
   const result = await CommentService.addReplyToComment(
     commentId,
     content,
@@ -38,13 +33,11 @@ const addReply = asyncHandler(async (req, res) => {
 
 // GET /posts/:postId/comments
 const getComments = asyncHandler(async (req, res) => {
-  const { page, limit } = req.query;
-  const pageNo = Number(page) || 1;
-  const itemPerPage = Number(limit) || 25;
+  const { page, limit } = CommentPaginationQuerySchema.parse(req.query);
   const result = await CommentService.getCommentsOnPost(
     req.postId!,
-    pageNo,
-    itemPerPage,
+    page,
+    limit,
   );
   return res
     .status(200)
@@ -54,13 +47,11 @@ const getComments = asyncHandler(async (req, res) => {
 // GET /posts/:postId/comments/:commentId/replies
 const getReplies = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  const { page, limit } = req.query;
-  const pageNo = Number(page) || 1;
-  const itemPerPage = Number(limit) || 25;
+  const { page, limit } = CommentPaginationQuerySchema.parse(req.query);
   const result = await CommentService.getRepliesOnComment(
     commentId,
-    pageNo,
-    itemPerPage,
+    page,
+    limit,
   );
   return res
     .status(200)
@@ -70,10 +61,7 @@ const getReplies = asyncHandler(async (req, res) => {
 // PATCH /posts/:postId/comments/:commentId
 const editComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  const { content } = req.body;
-  if (!content) {
-    throw new ApiError(400, "Content is required");
-  }
+  const { content } = CommentBodySchema.parse(req.body);
   const result = await CommentService.editComment(
     commentId,
     content,
