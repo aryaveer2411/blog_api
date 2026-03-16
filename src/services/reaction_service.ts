@@ -37,6 +37,61 @@ export class ReactionService {
     });
   };
 
+  static addReactionToComment = async (
+    commentId: string,
+    reaction: ReactionValue,
+    userID: string,
+  ): Promise<IReaction> => {
+    const updatedReaction = await Reaction.findOneAndUpdate(
+      { user: userID, reactableId: commentId },
+      {
+        $set: { value: reaction },
+        $setOnInsert: {
+          user: userID,
+          reactableId: commentId,
+          reactableType: ReactableType.COMMENT,
+        },
+      },
+      { upsert: true, new: true },
+    );
+    return updatedReaction;
+  };
+
+  static removeReactionFromComment = async (
+    commentId: string,
+    userID: string,
+  ): Promise<void> => {
+    await Reaction.findOneAndDelete({ user: userID, reactableId: commentId });
+  };
+
+  static getReactionsOnComment = async (
+    commentId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ reactions: IReaction[]; total: number }> => {
+    const [result] = await Reaction.aggregate([
+      {
+        $match: {
+          reactableId: new mongoose.Types.ObjectId(commentId),
+          reactableType: ReactableType.COMMENT,
+        },
+      },
+      {
+        $facet: {
+          reactions: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
+    ]);
+    return {
+      reactions: result.reactions,
+      total: result.total[0]?.count ?? 0,
+    };
+  };
+
   static getReactionOnPost = async (
     postID: string,
     page: number,

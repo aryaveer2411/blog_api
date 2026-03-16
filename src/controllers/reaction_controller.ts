@@ -73,4 +73,48 @@ const getUserReactions = asyncHandler(async (req, res) => {
   });
 });
 
-export { addReaction, removeReaction, getReactions, getUserReactions };
+const addCommentReaction = asyncHandler(async (req, res) => {
+  const { reaction } = req.body;
+  if (!reaction) {
+    throw new ApiError(400, "Missing reaction value");
+  }
+  const result = await ReactionService.addReactionToComment(
+    req.commentId!,
+    reaction,
+    req.userID!,
+  );
+  return res
+    .status(200)
+    .json({ response: new ApiResponse(200, result, "Reaction added") });
+});
+
+const removeCommentReaction = asyncHandler(async (req, res) => {
+  await ReactionService.removeReactionFromComment(req.commentId!, req.userID!);
+  return res
+    .status(200)
+    .json({ response: new ApiResponse(200, null, "Reaction removed") });
+});
+
+const getCommentReactions = asyncHandler(async (req, res) => {
+  const { page, limit } = req.query;
+  const pageNo = Number(page) || 1;
+  const itemPerPage = Number(limit) || 25;
+  const reactions = await ReactionService.getReactionsOnComment(
+    req.commentId!,
+    pageNo,
+    itemPerPage,
+  );
+  return res
+    .status(200)
+    .json({ response: new ApiResponse(200, reactions, "Reactions fetched") });
+});
+
+export {
+  addReaction,
+  removeReaction,
+  getReactions,
+  getUserReactions,
+  addCommentReaction,
+  removeCommentReaction,
+  getCommentReactions,
+};

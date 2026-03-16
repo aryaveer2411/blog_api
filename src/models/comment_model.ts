@@ -15,7 +15,6 @@ const commentSchema = new Schema<IComment, CommentModel>(
       type: Schema.Types.ObjectId,
       ref: "Comment",
       default: null,
-      index: true,
     },
     commentableType: {
       required: true,

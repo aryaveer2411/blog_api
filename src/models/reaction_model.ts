@@ -25,7 +25,7 @@ const reactionSchema = new Schema<IReaction, ReactionModel>({
     value: {
       type: Number,
       required: true,
-      enum: Object.values(ReactionValue),
+      enum: Object.values(ReactionValue).filter((v) => typeof v === "number"),
     },
 });
 

@@ -4,6 +4,7 @@ declare global {
       userEmail?: string;
       userID?: string;
       postId?: string;
+      commentId?: string;
     }
   }
 }
