@@ -16,3 +16,7 @@ export const uploadToCloudinary = (buffer: Buffer) => {
       .end(buffer);
   });
 };
+
+export const deleteFromCloudinary = (publicId: string) => {
+  return cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+};

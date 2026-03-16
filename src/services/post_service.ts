@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Post } from "../models/post_model";
 import { IPost } from "../types/model_types/IPost";
 import { ApiError } from "../utils/api_error";
-import { uploadToCloudinary } from "../utils/cloudinary_util";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary_util";
 import { GetPost, SortField, SortOrder } from "../types/post_types/post_type";
 
 export class PostService {
@@ -29,6 +29,12 @@ export class PostService {
     var publicId = "";
 
     if (file && file.buffer.length > 0) {
+      if (postId) {
+        const existing = await Post.findById(postId);
+        if (existing?.media_url?.public_id) {
+          await deleteFromCloudinary(existing.media_url.public_id);
+        }
+      }
       const result = (await uploadToCloudinary(file.buffer)) as any;
       url = result.secure_url;
       publicId = result.public_id;
@@ -66,6 +72,9 @@ export class PostService {
     const post = await Post.findByIdAndDelete(postId);
     if (!post) {
       throw new ApiError(404, "Invalid Post Id");
+    }
+    if (post.media_url?.public_id) {
+      await deleteFromCloudinary(post.media_url.public_id);
     }
   };
 

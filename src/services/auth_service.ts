@@ -6,6 +6,7 @@ import type { UserDocument, User as UserType } from "../models/user_model";
 import { IUser } from "../types/model_types/iUser";
 import { ApiError } from "../utils/api_error";
 import { AccessTokenPayload } from "../middlewares/auth_middleware";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary_util";
 
 export class AuthService {
   static registerUser = async (data: RegisterUserDto): Promise<void> => {
@@ -64,6 +65,19 @@ export class AuthService {
       user!.refreshToken = undefined;
       await user.save();
     }
+  };
+
+  static updateProfilePicture = async (userEmail: string, file: Express.Multer.File) => {
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+    if (user.profile_url?.public_id) {
+      await deleteFromCloudinary(user.profile_url.public_id);
+    }
+    const result = (await uploadToCloudinary(file.buffer)) as any;
+    user.profile_url = { public_id: result.public_id, url: result.secure_url };
+    await user.save();
   };
 
   static changePassword = async (oldPassword:string,newPassword:string,userEmail:string)=>{

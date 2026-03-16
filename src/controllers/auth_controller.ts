@@ -2,6 +2,7 @@
 import { Request } from "express";
 import { asyncHandler } from "../utils/async_handler";
 import { ApiResponse } from "../utils/api_response";
+import { ApiError } from "../utils/api_error";
 import { AuthService } from "../services/auth_service";
 import { RegisterUserDto, LoginUserDto } from "../dtos/auth_dto";
 import { LoginRequestBody, RegisterRequestBody, ChangePasswordRequestBody } from "../types/request_types/auth_request";
@@ -67,4 +68,16 @@ const forgotPassword = asyncHandler(async (req, res) => {
   });
 });
 
-export { login, logout, registerUser, forgotPassword, changePassword };
+const updateProfilePicture = asyncHandler(async (req, res) => {
+  const userEmail = req.userEmail ?? "";
+  const file = req.file;
+  if (!file) {
+    throw new ApiError(400, "Profile picture is required");
+  }
+  await AuthService.updateProfilePicture(userEmail, file);
+  return res.status(200).json({
+    response: new ApiResponse<any>(200, {}, "Profile picture updated successfully"),
+  });
+});
+
+export { login, logout, registerUser, forgotPassword, changePassword, updateProfilePicture };
