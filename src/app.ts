@@ -8,11 +8,9 @@ import { commentReactionRouter, reactionRouter } from "./routes/reaction_route";
 import { commentRouter } from "./routes/comment_route";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "./swagger";
-
+import { rateLimiter } from "./middlewares/rate_limiter";
 
 const app = express();
-
-
 
 app.use(
   cors({
@@ -39,13 +37,14 @@ app.use(cookieParser());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
+app.use(rateLimiter);
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/post/:postId/reactions", reactionRouter);
 
 app.use("/api/v1/post/:postId/comments", commentRouter);
 
-//Todo: will complete it after comment route is done
 app.use(
   "/api/v1/post/:postId/comments/:commentId/reactions",
   commentReactionRouter,
