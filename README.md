@@ -16,11 +16,13 @@ A REST API for a blogging platform built with **Express**, **TypeScript**, **Mon
 8. [Upsert Pattern for Reactions](#upsert-pattern-for-reactions)
 9. [Media Handling — Multer → Cloudinary](#media-handling--multer--cloudinary)
 10. [Request Validation with Zod](#request-validation-with-zod)
-11. [Error Handling](#error-handling)
-12. [Database Indexes](#database-indexes)
-13. [API Reference](#api-reference)
-14. [Environment Variables](#environment-variables)
-15. [Project Structure](#project-structure)
+11. [Redis Caching](#redis-caching)
+12. [Rate Limiting](#rate-limiting)
+13. [Error Handling](#error-handling)
+14. [Database Indexes](#database-indexes)
+15. [API Reference](#api-reference)
+16. [Environment Variables](#environment-variables)
+17. [Project Structure](#project-structure)
 
 ---
 
@@ -305,6 +307,64 @@ All query parameters arrive as strings (e.g. `"25"`, `"true"`). `z.coerce.number
 
 ---
 
+## Redis Caching
+
+Redis is used as an in-memory store for operations that benefit from fast key-value access without hitting MongoDB. The `RedisUtil` class (`src/utils/redis_util.ts`) wraps the `redis` client with typed helpers:
+
+| Method | Redis command | Use case |
+|---|---|---|
+| `set(key, value, ttl)` | `SETEX` | Cache a JSON value with an expiry |
+| `get(key)` | `GET` | Read a cached value |
+| `del(key)` | `DEL` | Invalidate a single key |
+| `incr(key)` | `INCR` | Atomically increment a counter |
+| `expire(key, seconds)` | `EXPIRE` | Set or reset a TTL on an existing key |
+| `ttl(key)` | `TTL` | Inspect remaining lifetime |
+| `delByPattern(pattern)` | `SCAN` + `DEL` | Bulk-invalidate keys matching a glob (e.g. `post:*`) |
+
+### Connection
+
+The Redis client (`src/redis/index.ts`) reads `REDIS_HOST` from the environment so it resolves correctly whether running locally (`localhost`) or inside Docker (service name `redis`):
+
+```ts
+createClient({ socket: { host: process.env.REDIS_HOST ?? "localhost", port: 6379 } })
+```
+
+---
+
+## Rate Limiting
+
+A global rate limiter middleware (`src/middlewares/rate_limiter.ts`) is applied to every API route before any route handler runs.
+
+### How it works
+
+- **Key:** `rate_limit:<req.path>` — one counter per endpoint path (e.g. `rate_limit:/api/v1/auth/login`)
+- **Algorithm:** INCR + EXPIRE on first hit (classic sliding-window approximation)
+- **Limit:** 15 requests per 5-second window
+- **Reset:** automatic — Redis deletes the key after the TTL expires, resetting the counter
+
+```
+Request arrives
+  → INCR rate_limit:/api/v1/auth/login   (count = N)
+  → if N === 1: EXPIRE key 5             (start the 5s window)
+  → if N > 15:  throw ApiError(429)
+  → else:       next()
+```
+
+### Why INCR + EXPIRE instead of a timestamp list?
+
+- `INCR` is an atomic Redis operation — no race condition even under concurrent requests.
+- Setting `EXPIRE` only when `count === 1` means the window is not extended by subsequent requests within the same window.
+- Zero application-side cleanup: Redis handles expiry natively.
+
+### Response on limit exceeded
+
+```json
+HTTP 429 Too Many Requests
+{ "success": false, "message": "Too many requests. Please try again later." }
+```
+
+---
+
 ## Error Handling
 
 ### `ApiError`
@@ -427,6 +487,7 @@ Swagger UI is available at **`http://localhost:5001/api-docs`** when the app is 
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `CORS_ORIGIN` | Allowed CORS origin |
+| `REDIS_HOST` | Redis hostname (default: `localhost`; use `redis` in Docker) |
 
 ---
 
@@ -465,6 +526,7 @@ src/
 │
 ├── middlewares/
 │   ├── auth_middleware.ts    # JWT verify + silent refresh token rotation
+│   ├── rate_limiter.ts       # Global rate limit: 15 req / 5s per path (Redis INCR)
 │   ├── reaction_middleware.ts # verifyPost, verifyComment
 │   └── upload_middleware.ts  # Multer memory storage
 │
@@ -482,10 +544,14 @@ src/
 ├── dtos/                     # Data transfer objects (controller → service boundary)
 │   └── auth_dto.ts
 │
+├── redis/
+│   └── index.ts              # Redis client (reads REDIS_HOST env var)
+│
 └── utils/
     ├── api_error.ts          # ApiError extends Error
     ├── api_response.ts       # Standardised response wrapper
     ├── async_handler.ts      # Wraps async controllers to forward errors
     ├── cloudinary_config.ts  # Cloudinary SDK init
-    └── cloudinary_util.ts    # uploadToCloudinary, deleteFromCloudinary
+    ├── cloudinary_util.ts    # uploadToCloudinary, deleteFromCloudinary
+    └── redis_util.ts         # RedisUtil: set/get/del/incr/expire/delByPattern
 ```
