@@ -4,6 +4,7 @@ import { IPost } from "../types/model_types/IPost";
 import { ApiError } from "../utils/api_error";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary_util";
 import { GetPost, SortField, SortOrder } from "../types/post_types/post_type";
+import redisUtil from "../utils/redis_util";
 
 export class PostService {
   static createOrEditPost = async (
@@ -47,6 +48,7 @@ export class PostService {
         media_url: { public_id: publicId, url: url },
       });
       await post.save();
+      await redisUtil.delByPattern("posts:*");
     } else {
       const updateData: Partial<{
         title: string;
@@ -57,14 +59,23 @@ export class PostService {
       if (content) updateData.content = content;
       if (file) updateData.media_url = { public_id: publicId, url: url };
       await Post.findByIdAndUpdate(postId, updateData, { new: true });
+      await Promise.all([
+        redisUtil.del(`post:${postId}`),
+        redisUtil.delByPattern("posts:*"),
+      ]);
     }
   };
 
   static getPostById = async (postId: string): Promise<IPost> => {
+    const cacheKey = `post:${postId}`;
+    const cached = await redisUtil.get<IPost>(cacheKey);
+    if (cached) return cached;
+
     const post = await Post.findById(postId);
     if (!post) {
       throw new ApiError(404, "Invalid Post Id");
     }
+    await redisUtil.set(cacheKey, post, 300);
     return post;
   };
 
@@ -73,6 +84,10 @@ export class PostService {
     if (!post) {
       throw new ApiError(404, "Invalid Post Id");
     }
+    await Promise.all([
+      redisUtil.del(`post:${postId}`),
+      redisUtil.delByPattern("posts:*"),
+    ]);
     if (post.media_url?.public_id) {
       await deleteFromCloudinary(post.media_url.public_id);
     }
@@ -97,6 +112,10 @@ export class PostService {
       isMedia !== undefined ? { media_url: { $exists: isMedia } } : {};
     const filter = { ...userFilter, ...titleFilter, ...mediaFilter };
 
+    const cacheKey = `posts:p${_pageNo}:i${_itemPerPage}:sb${_sortBy}:so${_sortOrder}:m${isMedia}:u${userID}:n${name}`;
+    const cached = await redisUtil.get<GetPost>(cacheKey);
+    if (cached) return cached;
+
     const [total, posts] = await Promise.all([
       Post.countDocuments({ ...filter, ...userFilter }),
       Post.find({ ...filter, ...userFilter })
@@ -105,6 +124,8 @@ export class PostService {
         .limit(_itemPerPage),
     ]);
 
-    return { total, pageNo: _pageNo, itemPerPage: _itemPerPage, posts };
+    const result = { total, pageNo: _pageNo, itemPerPage: _itemPerPage, posts };
+    await redisUtil.set(cacheKey, result, 60);
+    return result;
   };
 }

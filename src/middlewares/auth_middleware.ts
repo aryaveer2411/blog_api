@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/async_handler";
 import { ApiError } from "../utils/api_error";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user_model";
+import RedisUtil from "../utils/redis_util";
+import { IUser } from "../types/model_types/iUser";
 
 export interface AccessTokenPayload {
   _id: string;
@@ -25,13 +27,12 @@ export const verfyJwt = asyncHandler(
         accessToken,
         process.env.ACCESS_TOKEN_SECRET!,
       ) as AccessTokenPayload;
-
-      const user = await User.findOne({ email: decoded.email });
-
+      const cacheUser = await RedisUtil.get<IUser>(decoded.email);
+      const user = cacheUser ?? (await User.findOne({ email: decoded.email }));
       if (!user) throw new ApiError(401, "User not found");
-
+      if (!cacheUser) await RedisUtil.set(decoded.email, user);
       req.userEmail = user.email;
-      req.userID = user._id.toString();
+      req.userID = user._id!.toString();
       return next();
     } catch (error: any) {
       if (error.name === "TokenExpiredError") {
@@ -44,9 +45,9 @@ export const verfyJwt = asyncHandler(
         const decodedRefresh = jwt.verify(
           refreshToken,
           process.env.REFRESH_TOKEN_SECRET!,
-        )as AccessTokenPayload;;
+        ) as AccessTokenPayload;
 
-        const user = await User.findOne({email:decodedRefresh.email});
+        const user = await User.findOne({ email: decodedRefresh.email });
 
         if (!user || user.refreshToken !== refreshToken) {
           throw new ApiError(401, "Invalid refresh token");

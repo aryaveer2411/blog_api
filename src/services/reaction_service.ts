@@ -8,6 +8,7 @@ import {
 } from "../types/model_types/IReaction";
 import { ApiError } from "../utils/api_error";
 import { User } from "../models/user_model";
+import redisUtil from "../utils/redis_util";
 
 export class ReactionService {
   static addReactionToPost = async (
@@ -27,6 +28,7 @@ export class ReactionService {
       },
       { upsert: true, new: true },
     );
+    await redisUtil.delByPattern(`reactions:post:${postID}:*`);
     return updatedReaction;
   };
 
@@ -35,6 +37,7 @@ export class ReactionService {
       user: userID,
       reactableId: postID,
     });
+    await redisUtil.delByPattern(`reactions:post:${postID}:*`);
   };
 
   static addReactionToComment = async (
@@ -54,6 +57,7 @@ export class ReactionService {
       },
       { upsert: true, new: true },
     );
+    await redisUtil.delByPattern(`reactions:comment:${commentId}:*`);
     return updatedReaction;
   };
 
@@ -62,6 +66,7 @@ export class ReactionService {
     userID: string,
   ): Promise<void> => {
     await Reaction.findOneAndDelete({ user: userID, reactableId: commentId });
+    await redisUtil.delByPattern(`reactions:comment:${commentId}:*`);
   };
 
   static getReactionsOnComment = async (
@@ -69,6 +74,10 @@ export class ReactionService {
     page: number,
     limit: number,
   ): Promise<{ reactions: IReaction[]; total: number }> => {
+    const cacheKey = `reactions:comment:${commentId}:p${page}:l${limit}`;
+    const cached = await redisUtil.get<{ reactions: IReaction[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
     const [result] = await Reaction.aggregate([
       {
         $match: {
@@ -86,10 +95,12 @@ export class ReactionService {
         },
       },
     ]);
-    return {
+    const data = {
       reactions: result.reactions,
       total: result.total[0]?.count ?? 0,
     };
+    await redisUtil.set(cacheKey, data, 60);
+    return data;
   };
 
   static getReactionOnPost = async (
@@ -98,6 +109,10 @@ export class ReactionService {
     limit: number,
     userId?: string,
   ): Promise<{ reactions: IReaction[]; total: number }> => {
+    const cacheKey = `reactions:post:${postID}:p${page}:l${limit}:u${userId}`;
+    const cached = await redisUtil.get<{ reactions: IReaction[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
     if (userId) {
       const user = await User.findById(userId);
       if (!user) {
@@ -132,9 +147,11 @@ export class ReactionService {
         },
       },
     ]);
-    return {
+    const data = {
       reactions: result.reactions,
       total: result.total[0]?.count ?? 0,
     };
+    await redisUtil.set(cacheKey, data, 60);
+    return data;
   };
 }

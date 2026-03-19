@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Comment } from "../models/comment_model";
 import { IComment, CommentableType } from "../types/model_types/IComment";
 import { ApiError } from "../utils/api_error";
+import redisUtil from "../utils/redis_util";
 
 export class CommentService {
   // Add a top-level comment on a post
@@ -17,6 +18,7 @@ export class CommentService {
       commentableType: CommentableType.POST,
       parentComment: null,
     });
+    await redisUtil.delByPattern(`comments:post:${postId}:*`);
     return comment;
   };
 
@@ -37,6 +39,7 @@ export class CommentService {
       commentableType: CommentableType.COMMENT,
       parentComment: new mongoose.Types.ObjectId(parentCommentId),
     });
+    await redisUtil.delByPattern(`replies:${parentCommentId}:*`);
     return reply;
   };
 
@@ -46,6 +49,10 @@ export class CommentService {
     page: number,
     limit: number,
   ): Promise<{ comments: IComment[]; total: number }> => {
+    const cacheKey = `comments:post:${postId}:p${page}:l${limit}`;
+    const cached = await redisUtil.get<{ comments: IComment[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
     const [result] = await Comment.aggregate([
       {
         $match: {
@@ -65,10 +72,12 @@ export class CommentService {
         },
       },
     ]);
-    return {
+    const data = {
       comments: result.comments,
       total: result.total[0]?.count ?? 0,
     };
+    await redisUtil.set(cacheKey, data, 60);
+    return data;
   };
 
   // Get replies to a comment (paginated)
@@ -77,6 +86,10 @@ export class CommentService {
     page: number,
     limit: number,
   ): Promise<{ comments: IComment[]; total: number }> => {
+    const cacheKey = `replies:${parentCommentId}:p${page}:l${limit}`;
+    const cached = await redisUtil.get<{ comments: IComment[]; total: number }>(cacheKey);
+    if (cached) return cached;
+
     const [result] = await Comment.aggregate([
       {
         $match: {
@@ -94,10 +107,12 @@ export class CommentService {
         },
       },
     ]);
-    return {
+    const data = {
       comments: result.comments,
       total: result.total[0]?.count ?? 0,
     };
+    await redisUtil.set(cacheKey, data, 60);
+    return data;
   };
 
   // Edit a comment (only owner)
@@ -114,6 +129,11 @@ export class CommentService {
     if (!comment) {
       throw new ApiError(404, "Comment not found or you are not the owner");
     }
+    if (comment.commentableType === CommentableType.POST) {
+      await redisUtil.delByPattern(`comments:post:${comment.commentableId}:*`);
+    } else {
+      await redisUtil.delByPattern(`replies:${comment.commentableId}:*`);
+    }
     return comment;
   };
 
@@ -125,6 +145,11 @@ export class CommentService {
     const comment = await Comment.findOne({ _id: commentId, owner: userId });
     if (!comment) {
       throw new ApiError(404, "Comment not found or you are not the owner");
+    }
+    if (comment.commentableType === CommentableType.POST) {
+      await redisUtil.delByPattern(`comments:post:${comment.commentableId}:*`);
+    } else {
+      await redisUtil.delByPattern(`replies:${comment.commentableId}:*`);
     }
     const descendants = await Comment.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(commentId) } },
