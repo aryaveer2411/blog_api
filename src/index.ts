@@ -2,6 +2,7 @@ import { env } from "./config/env";
 import app from "./app";
 import { connectDB } from "./database";
 import { connectRedisClient } from "./redis";
+import logger from "./utils/logger";
 
 const startServer = async () => {
   try {
@@ -9,10 +10,10 @@ const startServer = async () => {
     await connectRedisClient();
 
     app.listen(env.PORT, () => {
-      console.log(`Server running on http://localhost:${env.PORT}`);
+      logger.info(`Server running on http://localhost:${env.PORT}`);
     });
   } catch (error) {
-    console.error("Mongo DB connection failed:", error);
+    logger.error("Mongo DB connection failed:", error);
     process.exit(1);
   }
 };

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
+import logger from "./logger";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -23,5 +24,5 @@ export const sendEmail = async (
     subject: subject, // The title or subject of the email
     html: html, // I like sending my email as html, you can send \
   });
-  console.log("Email sent");
+  logger.info(`Email sent to ${userEmail}`);
 };

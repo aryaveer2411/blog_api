@@ -1,6 +1,7 @@
 import { env } from "./config/env";
 import express, { Request, Response, NextFunction } from "express";
 import { ApiError } from "./utils/api_error";
+import logger from "./utils/logger";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth_route";
@@ -53,10 +54,12 @@ app.use(
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
+    logger.warn(`${err.statusCode} - ${err.message}`);
     return res
       .status(err.statusCode)
       .json({ success: false, message: err.message, errors: err.errors });
   }
+  logger.error(err);
   return res
     .status(500)
     .json({ success: false, message: err.message || "Internal server error" });

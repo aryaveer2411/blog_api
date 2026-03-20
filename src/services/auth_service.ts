@@ -24,8 +24,7 @@ export class AuthService {
       last_name: data.last_name,
     });
 
-    const isUserCreated = await user.save();
-    console.log(isUserCreated);
+    await user.save();
   };
 
   static generateJWTToken = (
