@@ -19,11 +19,12 @@ A REST API for a blogging platform built with **Express**, **TypeScript**, **Mon
 11. [Email Verification & Password Reset](#email-verification--password-reset)
 12. [Redis Caching](#redis-caching)
 13. [Rate Limiting](#rate-limiting)
-13. [Error Handling](#error-handling)
-14. [Database Indexes](#database-indexes)
-15. [API Reference](#api-reference)
-16. [Environment Variables](#environment-variables)
-17. [Project Structure](#project-structure)
+14. [Logging](#logging)
+15. [Error Handling](#error-handling)
+16. [Database Indexes](#database-indexes)
+17. [API Reference](#api-reference)
+18. [Environment Variables](#environment-variables)
+19. [Project Structure](#project-structure)
 
 ---
 
@@ -390,6 +391,31 @@ HTTP 429 Too Many Requests
 
 ---
 
+## Logging
+
+Structured logging is handled by **Winston** (`src/utils/logger.ts`). All `console.log`/`console.error` calls have been replaced with the logger.
+
+### Log format
+
+```
+2026-03-21 12:00:00 [INFO]: MongoDB Connected: localhost
+2026-03-21 12:00:01 [INFO]: Redis client connected
+2026-03-21 12:00:01 [INFO]: Server running on http://localhost:5000
+2026-03-21 12:00:05 [WARN]: 404 - Post not found
+2026-03-21 12:00:06 [ERROR]: TypeError: Cannot read properties of undefined
+    at ...
+```
+
+### Log levels used
+
+| Level | Where |
+|---|---|
+| `info` | Server start, DB/Redis connected, email sent |
+| `warn` | Known `ApiError`s (4xx responses) |
+| `error` | Unexpected errors (5xx), connection failures |
+
+---
+
 ## Error Handling
 
 ### `ApiError`
@@ -593,5 +619,6 @@ src/
     ├── cloudinary_config.ts  # Cloudinary SDK init
     ├── cloudinary_util.ts    # uploadToCloudinary, deleteFromCloudinary
     ├── node_mailer_util.ts   # sendEmail via Gmail SMTP (Nodemailer)
+    ├── logger.ts             # Winston logger (info/warn/error)
     └── redis_util.ts         # RedisUtil: set/get/del/incr/expire/delByPattern
 ```
