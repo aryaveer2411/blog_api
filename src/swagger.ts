@@ -37,6 +37,7 @@ const swaggerDocument = {
           email: { type: "string", format: "email", example: "john@example.com" },
           dob: { type: "string", format: "date", example: "1995-06-15" },
           profile_url: { $ref: "#/components/schemas/MediaObject" },
+          email_verified: { type: "boolean", example: false },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
@@ -275,6 +276,99 @@ const swaggerDocument = {
           "200": { description: "Password changed successfully" },
           "400": { description: "Validation error" },
           "401": { description: "Unauthorized" },
+        },
+      },
+    },
+    "/auth/send-otp": {
+      post: {
+        tags: ["Auth"],
+        summary: "Send email verification OTP",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "200": { description: "OTP sent to the authenticated user's email" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "User not found" },
+        },
+      },
+    },
+    "/auth/verify-otp": {
+      post: {
+        tags: ["Auth"],
+        summary: "Verify email OTP",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["emailOtp"],
+                properties: {
+                  emailOtp: { type: "string", minLength: 6, maxLength: 6, example: "482910" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Email verified successfully" },
+          "400": { description: "Invalid or expired OTP" },
+          "401": { description: "Unauthorized" },
+        },
+      },
+    },
+    "/auth/forgot-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Request password reset",
+        description: "Sends a 6-digit reset OTP to the email. Requires the email to be verified first — unverified accounts cannot be recovered.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email"],
+                properties: {
+                  email: { type: "string", format: "email", example: "john@example.com" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Reset OTP sent to email" },
+          "403": { description: "Email not verified — account cannot be recovered" },
+          "404": { description: "User not found" },
+        },
+      },
+    },
+    "/auth/reset-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Reset password using OTP",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "otp", "new_password"],
+                properties: {
+                  email: { type: "string", format: "email", example: "john@example.com" },
+                  otp: { type: "string", minLength: 6, maxLength: 6, example: "482910" },
+                  new_password: { type: "string", minLength: 6, example: "newpass123" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Password reset successfully" },
+          "400": { description: "Invalid or expired OTP" },
+          "404": { description: "User not found" },
         },
       },
     },

@@ -16,8 +16,9 @@ A REST API for a blogging platform built with **Express**, **TypeScript**, **Mon
 8. [Upsert Pattern for Reactions](#upsert-pattern-for-reactions)
 9. [Media Handling — Multer → Cloudinary](#media-handling--multer--cloudinary)
 10. [Request Validation with Zod](#request-validation-with-zod)
-11. [Redis Caching](#redis-caching)
-12. [Rate Limiting](#rate-limiting)
+11. [Email Verification & Password Reset](#email-verification--password-reset)
+12. [Redis Caching](#redis-caching)
+13. [Rate Limiting](#rate-limiting)
 13. [Error Handling](#error-handling)
 14. [Database Indexes](#database-indexes)
 15. [API Reference](#api-reference)
@@ -307,6 +308,30 @@ All query parameters arrive as strings (e.g. `"25"`, `"true"`). `z.coerce.number
 
 ---
 
+## Email Verification & Password Reset
+
+OTPs are 6-digit numeric codes generated with `Math.random`, stored in Redis with a 10-minute TTL, and sent via Nodemailer (Gmail SMTP).
+
+Two separate key namespaces prevent cross-flow OTP reuse:
+
+| Flow | Redis key | Sent when |
+|---|---|---|
+| Email verification | `otp:{email}` | `POST /send-otp` |
+| Password reset | `otp:reset:{email}` | `POST /forgot-password` |
+
+### Forgot password decision tree
+
+```
+POST /forgot-password { email }
+  → user not found         → 404
+  → email_verified = false → 403 (account cannot be recovered)
+  → email_verified = true  → send reset OTP → 200
+```
+
+Unverified accounts are treated as lost — this keeps the flow simple and avoids a two-step hijack path where an attacker uses forgot-password to trigger email verification.
+
+---
+
 ## Redis Caching
 
 Redis is used as an in-memory store for operations that benefit from fast key-value access without hitting MongoDB. The `RedisUtil` class (`src/utils/redis_util.ts`) wraps the `redis` client with typed helpers:
@@ -326,7 +351,7 @@ Redis is used as an in-memory store for operations that benefit from fast key-va
 The Redis client (`src/redis/index.ts`) reads `REDIS_HOST` from the environment so it resolves correctly whether running locally (`localhost`) or inside Docker (service name `redis`):
 
 ```ts
-createClient({ socket: { host: process.env.REDIS_HOST ?? "localhost", port: 6379 } })
+createClient({ socket: { host: env.REDIS_HOST, port: 6379 } })
 ```
 
 ---
@@ -429,6 +454,10 @@ Swagger UI is available at **`http://localhost:5001/api-docs`** when the app is 
 | POST | `/logout` | No | Clears cookies |
 | POST | `/change-password` | Yes | Change password |
 | PATCH | `/profile-picture` | Yes | Upload/replace profile picture |
+| POST | `/send-otp` | Yes | Send email verification OTP (10 min TTL) |
+| POST | `/verify-otp` | Yes | Verify email OTP, sets `email_verified = true` |
+| POST | `/forgot-password` | No | Sends reset OTP. Returns 403 if email is not verified (account unrecoverable) |
+| POST | `/reset-password` | No | Verify reset OTP and set new password |
 
 ### Posts — `/api/v1/post`
 
@@ -473,21 +502,27 @@ Swagger UI is available at **`http://localhost:5001/api-docs`** when the app is 
 
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `PORT` | Server port (default: 5000) |
-| `MONGO_URI` | Full MongoDB connection string |
-| `MONGO_ROOT_USERNAME` | MongoDB root user (Docker only) |
-| `MONGO_ROOT_PASSWORD` | MongoDB root password (Docker only) |
-| `ACCESS_TOKEN_SECRET` | Secret for signing access JWTs |
-| `ACCESS_TOKEN_EXPIRY` | Access token lifetime (e.g. `15m`) |
-| `REFRESH_TOKEN_SECRET` | Secret for signing refresh JWTs |
-| `REFRESH_TOKEN_EXPIRY` | Refresh token lifetime (e.g. `7d`) |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `CORS_ORIGIN` | Allowed CORS origin |
-| `REDIS_HOST` | Redis hostname (default: `localhost`; use `redis` in Docker) |
+All variables are validated at startup via `src/validators/env_validator.ts` using Zod. Missing or malformed values will crash the process with a clear error listing the invalid fields.
+
+| Variable | Required | Description |
+|---|---|---|
+| `PORT` | No (default: `5000`) | Server port |
+| `MONGO_URI` | Yes | Full MongoDB connection string |
+| `MONGO_ROOT_USERNAME` | Yes | MongoDB root user |
+| `MONGO_ROOT_PASSWORD` | Yes | MongoDB root password |
+| `MONGO_DATABASE` | Yes | MongoDB database name |
+| `ACCESS_TOKEN_SECRET` | Yes | Secret for signing access JWTs |
+| `ACCESS_TOKEN_EXPIRY` | Yes | Access token lifetime (e.g. `15m`) |
+| `REFERESH_TOKEN_SECRET` | Yes | Secret for signing refresh JWTs |
+| `REFRESH_TOKEN_EXPIRY` | Yes | Refresh token lifetime (e.g. `7d`) |
+| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Yes | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
+| `CORS_ORIGIN` | No | Allowed CORS origin |
+| `REDIS_HOST` | No (default: `localhost`) | Redis hostname; use `redis` in Docker |
+| `RESEND_API_KEY` | Yes | Resend API key for transactional email |
+| `EMAIL` | Yes | Gmail address used as the sender |
+| `EMAIL_APP_PASSWORD` | Yes | Gmail app password for SMTP auth |
 
 ---
 
@@ -530,8 +565,12 @@ src/
 │   ├── reaction_middleware.ts # verifyPost, verifyComment
 │   └── upload_middleware.ts  # Multer memory storage
 │
+├── config/
+│   └── env.ts                # Calls dotenv.config() + validateEnv(), exports typed `env`
+│
 ├── validators/               # Zod schemas, one file per controller
 │   ├── auth_validator.ts
+│   ├── env_validator.ts      # Zod schema for all env vars; exits on invalid config
 │   ├── post_validator.ts
 │   ├── comment_validator.ts
 │   └── reaction_validator.ts
@@ -553,5 +592,6 @@ src/
     ├── async_handler.ts      # Wraps async controllers to forward errors
     ├── cloudinary_config.ts  # Cloudinary SDK init
     ├── cloudinary_util.ts    # uploadToCloudinary, deleteFromCloudinary
+    ├── node_mailer_util.ts   # sendEmail via Gmail SMTP (Nodemailer)
     └── redis_util.ts         # RedisUtil: set/get/del/incr/expire/delByPattern
 ```

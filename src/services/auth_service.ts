@@ -145,18 +145,12 @@ export class AuthService {
     await sendEmail(userEmail, subject, html);
   };
 
-  static forgotPassword = async (
-    userEmail: string,
-  ): Promise<{ emailVerified: boolean }> => {
+  static forgotPassword = async (userEmail: string): Promise<void> => {
     const user = await User.findOne({ email: userEmail });
     if (!user) throw new ApiError(404, "User not found");
+    if (!user.email_verified) throw new ApiError(403, "Email not verified. Account cannot be recovered.");
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    if (!user.email_verified) {
-      return { emailVerified: false };
-    }
-
     await RedisUtil.set(`otp:reset:${userEmail}`, otp, 600);
     const subject = "Your password reset code";
     const html = `
@@ -168,7 +162,6 @@ export class AuthService {
       </div>
     `;
     await sendEmail(userEmail, subject, html);
-    return { emailVerified: true };
   };
 
   static resetPassword = async (

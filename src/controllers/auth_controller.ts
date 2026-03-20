@@ -92,12 +92,9 @@ const changePassword = asyncHandler(
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = ForgotPasswordSchema.parse(req.body);
-  const { emailVerified } = await AuthService.forgotPassword(email);
-  const message = emailVerified
-    ? "Password reset OTP sent to your email"
-    : "Your email is not verified. Cannot reset password";
+  await AuthService.forgotPassword(email);
   return res.status(200).json({
-    response: new ApiResponse<any>(200, { emailVerified }, message),
+    response: new ApiResponse<any>(200, {}, "Password reset OTP sent to your email"),
   });
 });
 
