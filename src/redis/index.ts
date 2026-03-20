@@ -1,7 +1,8 @@
 import { createClient } from "redis";
+import { env } from "../config/env";
 
 export const redis = createClient({
-  socket: { host: process.env.REDIS_HOST ?? "localhost", port: 6379 },
+  socket: { host: env.REDIS_HOST, port: 6379 },
 }).on("error", (err: Error) => {
   console.log("Redis Error:", err);
 });

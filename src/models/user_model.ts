@@ -1,4 +1,5 @@
 import mongoose, { HydratedDocument, Model, Schema } from "mongoose";
+import { env } from "../config/env";
 import bcrypt from "bcrypt";
 import { IUser, UserMethods } from "../types/model_types/iUser";
 import jwt, { SignOptions } from "jsonwebtoken";
@@ -41,6 +42,10 @@ export const UserSchema = new Schema<IUser, UserModel, UserMethods>(
     refreshToken: {
       type: String,
     },
+    email_verified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -65,9 +70,9 @@ UserSchema.methods.generateAccessToken =  function () {
       email: this.email,
       userName: this.first_name,
     },
-    process.env.ACCESS_TOKEN_SECRET!,
+    env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY! as SignOptions["expiresIn"],
+      expiresIn: env.ACCESS_TOKEN_EXPIRY as SignOptions["expiresIn"],
     },
   );
 }
@@ -79,9 +84,9 @@ UserSchema.methods.generateRefreshToken = function () {
       email: this.email,
       userName: this.first_name,
     },
-    process.env.REFERESH_TOKEN_SECRET!,
+    env.REFERESH_TOKEN_SECRET,
     {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY! as SignOptions["expiresIn"],
+      expiresIn: env.REFRESH_TOKEN_EXPIRY as SignOptions["expiresIn"],
     },
   );
 };

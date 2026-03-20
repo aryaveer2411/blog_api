@@ -10,7 +10,14 @@ import {
   RegisterRequestBody,
   ChangePasswordRequestBody,
 } from "../types/request_types/auth_request";
-import { LoginSchema, RegisterSchema, ChangePasswordSchema } from "../validators/auth_validator";
+import {
+  LoginSchema,
+  RegisterSchema,
+  ChangePasswordSchema,
+  OtpValidator,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+} from "../validators/auth_validator";
 
 const options = {
   httpOnly: true,
@@ -84,8 +91,21 @@ const changePassword = asyncHandler(
 );
 
 const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = ForgotPasswordSchema.parse(req.body);
+  const { emailVerified } = await AuthService.forgotPassword(email);
+  const message = emailVerified
+    ? "Password reset OTP sent to your email"
+    : "Your email is not verified. Cannot reset password";
   return res.status(200).json({
-    response: new ApiResponse<any>(200, {}, "Succesfully created user"),
+    response: new ApiResponse<any>(200, { emailVerified }, message),
+  });
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, otp, new_password } = ResetPasswordSchema.parse(req.body);
+  await AuthService.resetPassword(email, otp, new_password);
+  return res.status(200).json({
+    response: new ApiResponse<any>(200, {}, "Password reset successfully"),
   });
 });
 
@@ -105,11 +125,31 @@ const updateProfilePicture = asyncHandler(async (req, res) => {
   });
 });
 
+const sendEmailOtp = asyncHandler(async (req, res) => {
+  const email = req.userEmail!;
+  await AuthService.sendEmailOtp(email);
+  return res.status(200).json({
+    response: new ApiResponse<any>(200, {}, "Email Otp Sent"),
+  });
+});
+
+const verifyEmailOtp = asyncHandler(async (req, res) => {
+  const email = req.userEmail!;
+  const {emailOtp} = OtpValidator.parse(req.body);
+  await AuthService.verifyEmailOtp(email, emailOtp);
+  return res.status(200).json({
+    response: new ApiResponse<any>(200, {}, "Email Otp Verified"),
+  });
+});
+
 export {
   login,
   logout,
   registerUser,
   forgotPassword,
+  resetPassword,
   changePassword,
   updateProfilePicture,
+  sendEmailOtp,
+  verifyEmailOtp,
 };

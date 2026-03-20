@@ -1,3 +1,4 @@
+import { env } from "./config/env";
 import express, { Request, Response, NextFunction } from "express";
 import { ApiError } from "./utils/api_error";
 import cors from "cors";
@@ -14,7 +15,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: env.CORS_ORIGIN,
     credentials: true,
   }),
 );

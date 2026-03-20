@@ -20,4 +20,5 @@ export interface IUser {
   createdAt?: Date;
   updatedAt?: Date;
   refreshToken?: string;
+  email_verified: boolean;
 }

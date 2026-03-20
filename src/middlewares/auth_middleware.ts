@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user_model";
 import RedisUtil from "../utils/redis_util";
 import { IUser } from "../types/model_types/iUser";
+import { env } from "../config/env";
 
 export interface AccessTokenPayload {
   _id: string;
@@ -25,7 +26,7 @@ export const verfyJwt = asyncHandler(
     try {
       const decoded = jwt.verify(
         accessToken,
-        process.env.ACCESS_TOKEN_SECRET!,
+        env.ACCESS_TOKEN_SECRET,
       ) as AccessTokenPayload;
       const cacheUser = await RedisUtil.get<IUser>(decoded.email);
       const user = cacheUser ?? (await User.findOne({ email: decoded.email }));
@@ -44,7 +45,7 @@ export const verfyJwt = asyncHandler(
 
         const decodedRefresh = jwt.verify(
           refreshToken,
-          process.env.REFRESH_TOKEN_SECRET!,
+          env.REFERESH_TOKEN_SECRET,
         ) as AccessTokenPayload;
 
         const user = await User.findOne({ email: decodedRefresh.email });
