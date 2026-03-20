@@ -1,18 +1,14 @@
-import { createClient } from "redis";
+import { Redis } from "@upstash/redis";
 import { env } from "../config/env";
 import logger from "../utils/logger";
 
-export const redis = createClient({
-  socket: { host: env.REDIS_HOST, port: 6379 },
-}).on("error", (err: Error) => {
-  logger.error("Redis Error:", err);
+export const redis = new Redis({
+  url: env.UPSTASH_REDIS_URL,
+  token: env.UPSTASH_REDIS_TOKEN,
 });
 
+// No persistent connection needed — Upstash is HTTP-based.
+// Kept for interface compatibility with index.ts startup sequence.
 export const connectRedisClient = async () => {
-  try {
-    await redis.connect();
-    logger.info("Redis client connected");
-  } catch (e) {
-    logger.error("Redis client error", e);
-  }
+  logger.info("Upstash Redis ready (HTTP)");
 };

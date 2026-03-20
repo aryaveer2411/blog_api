@@ -533,10 +533,7 @@ All variables are validated at startup via `src/validators/env_validator.ts` usi
 | Variable | Required | Description |
 |---|---|---|
 | `PORT` | No (default: `5000`) | Server port |
-| `MONGO_URI` | Yes | Full MongoDB connection string |
-| `MONGO_ROOT_USERNAME` | Yes | MongoDB root user |
-| `MONGO_ROOT_PASSWORD` | Yes | MongoDB root password |
-| `MONGO_DATABASE` | Yes | MongoDB database name |
+| `MONGO_URI` | Yes | MongoDB Atlas connection string |
 | `ACCESS_TOKEN_SECRET` | Yes | Secret for signing access JWTs |
 | `ACCESS_TOKEN_EXPIRY` | Yes | Access token lifetime (e.g. `15m`) |
 | `REFERESH_TOKEN_SECRET` | Yes | Secret for signing refresh JWTs |
@@ -545,7 +542,8 @@ All variables are validated at startup via `src/validators/env_validator.ts` usi
 | `CLOUDINARY_API_KEY` | Yes | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
 | `CORS_ORIGIN` | No | Allowed CORS origin |
-| `REDIS_HOST` | No (default: `localhost`) | Redis hostname; use `redis` in Docker |
+| `UPSTASH_REDIS_URL` | Yes | Upstash Redis REST URL |
+| `UPSTASH_REDIS_TOKEN` | Yes | Upstash Redis REST token |
 | `RESEND_API_KEY` | Yes | Resend API key for transactional email |
 | `EMAIL` | Yes | Gmail address used as the sender |
 | `EMAIL_APP_PASSWORD` | Yes | Gmail app password for SMTP auth |

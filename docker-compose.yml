@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  
+
   app:
     build: .
     container_name: blog_app
@@ -9,12 +9,10 @@ services:
     working_dir: /app
     ports:
       - "5001:5000"
-    depends_on:
-      - mongo
-      - redis
     environment:
       MONGO_URI: ${MONGO_URI}
-      REDIS_HOST: redis
+      UPSTASH_REDIS_URL: ${UPSTASH_REDIS_URL}
+      UPSTASH_REDIS_TOKEN: ${UPSTASH_REDIS_TOKEN}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
@@ -22,29 +20,3 @@ services:
       - .:/app
       - /app/node_modules
     command: npm run dev
-
-  redis:
-    container_name: redis_container
-    image: redis:7-alpine
-    restart: always
-    ports:
-      - "6379:6379"
-    command: redis-server --loglevel warning
-    volumes:
-      - redis-data:/data
-
-  mongo:
-    container_name: mongodb_container
-    image: mongo:7
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    volumes:
-      - mongo-data:/data/db
-
-volumes:
-  redis-data:
-  mongo-data:

@@ -1,9 +1,6 @@
 import { z } from "zod";
 
 const EnvSchema = z.object({
-  MONGO_ROOT_USERNAME: z.string().min(1),
-  MONGO_ROOT_PASSWORD: z.string().min(1),
-  MONGO_DATABASE: z.string().min(1),
   MONGO_URI: z.string().min(1),
   PORT: z.coerce.number().default(5000),
   CORS_ORIGIN: z.string().optional(),
@@ -14,7 +11,8 @@ const EnvSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
   CLOUDINARY_CLOUD_NAME: z.string().min(1),
-  REDIS_HOST: z.string().default("localhost"),
+  UPSTASH_REDIS_URL: z.string().min(1),
+  UPSTASH_REDIS_TOKEN: z.string().min(1),
   RESEND_API_KEY: z.string().min(1),
   EMAIL: z.string().check(z.email()),
   EMAIL_APP_PASSWORD: z.string().min(1),

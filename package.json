@@ -7,13 +7,14 @@
     "start": "node dist/index.js",
     "dev": "nodemon",
     "prestart": "npm run build",
-    "seed:posts": "ts-node src/scripts/seed_posts.ts"
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@upstash/redis": "^1.37.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
